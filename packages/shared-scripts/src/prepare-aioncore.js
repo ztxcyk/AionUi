@@ -226,12 +226,41 @@ function downloadFile(url, outputPath) {
   }
 }
 
+function extractZip(archivePath, outputDir) {
+  // Windows ships bsdtar (tar.exe) which reads zip archives, and newer
+  // PowerShell 7 images can fail Expand-Archive with an ExtractToDirectory
+  // overload error, so try several strategies before giving up.
+  const attempts = [
+    () => execFileSync('tar', ['-xf', archivePath, '-C', outputDir]),
+    () => {
+      const ps = `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${outputDir.replace(/'/g, "''")}' -Force`;
+      execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps]);
+    },
+    () => {
+      const ps =
+        `Add-Type -AssemblyName System.IO.Compression.FileSystem; ` +
+        `[System.IO.Compression.ZipFile]::ExtractToDirectory('${archivePath.replace(/'/g, "''")}', '${outputDir.replace(/'/g, "''")}')`;
+      execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps]);
+    },
+  ];
+  let lastError = null;
+  for (const attempt of attempts) {
+    try {
+      attempt();
+      return;
+    } catch (error) {
+      lastError = error;
+      console.warn(`  Zip extraction strategy failed: ${error.message}`);
+    }
+  }
+  throw lastError || new Error(`Failed to extract ${archivePath}`);
+}
+
 function extractArchive(archivePath, outputDir, platform) {
   ensureDirectory(outputDir);
   if (platform === 'win32' || archivePath.endsWith('.zip')) {
     if (platform === 'win32') {
-      const ps = `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${outputDir.replace(/'/g, "''")}' -Force`;
-      execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps]);
+      extractZip(archivePath, outputDir);
     } else {
       execFileSync('unzip', ['-o', archivePath, '-d', outputDir]);
     }
