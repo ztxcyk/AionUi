@@ -43,6 +43,7 @@ function normalizeReleaseBase(releaseInfo) {
     releaseInfo.tag.length > 255 ||
     releaseInfo.tag === '.' ||
     releaseInfo.tag === '..' ||
+    // eslint-disable-next-line no-control-regex -- 拒绝 Release tag 中的控制字符
     /[\u0000-\u001f\u007f]/u.test(releaseInfo.tag)
   ) {
     throw new Error('OfficeCLI release information tag is invalid');
