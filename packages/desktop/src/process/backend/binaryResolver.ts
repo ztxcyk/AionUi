@@ -1,7 +1,7 @@
 /**
  * Resolve the aioncore binary path.
  *
- * Search order:
+ * Packaged Windows uses only the bundled binary. Otherwise search order:
  *  1. AIONUI_BACKEND_BIN env override (path, resolved to absolute)
  *  2. Bundled with app (production)
  *  3. System PATH
@@ -68,7 +68,7 @@ function trimLookupText(text: string): string {
  * Resolve the aioncore binary path.
  * Returns the absolute path to the binary, or throws if not found.
  */
-export function resolveBinaryPath(): string {
+export function resolveBinaryPath(isPackaged = false): string {
   const runtimeKey = getRuntimeKey();
   const binaryName = getBinaryName();
   const diagnostics: BackendBinaryResolveDiagnostics = {
@@ -76,6 +76,12 @@ export function resolveBinaryPath(): string {
     binaryName,
     pathLookupCommand: process.platform === 'win32' ? `where ${BINARY_NAME}` : `which ${BINARY_NAME}`,
   };
+
+  if (process.platform === 'win32' && isPackaged) {
+    const bundled = bundledPath(runtimeKey, binaryName, diagnostics);
+    if (bundled) return bundled;
+    throw new BackendBinaryResolveError(`Cannot find bundled "${BINARY_NAME}" binary for packaged Windows.`, diagnostics);
+  }
 
   const override = envOverridePath(diagnostics);
   if (override) return override;

@@ -113,6 +113,9 @@ extraResources:
   - from: resources/hub
     to: hub
 win:
+  extraResources:
+    - from: resources/bundled-officecli/officecli.exe
+      to: officecli/officecli.exe
   target:
     - nsis
     #    - msi

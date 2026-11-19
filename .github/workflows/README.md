@@ -2,6 +2,29 @@
 
 本项目使用 GPT 驱动的 GitHub Actions 工作流辅助 PR 审查。
 
+## Windows 离线 OfficeCLI 构建
+
+正式和手动构建在需要 Windows 时只解析一次 `ztxcyk/OfficeCLI` 最新正式 Release，
+并将同一 Release 元数据传给所有 Windows 任务。矩阵跳过不存在的架构；所选 Windows
+架构全部缺失、缺少 `SHA256SUMS`、下载或校验失败时构建失败。非 Windows 单平台手动构建不查询 OfficeCLI。
+手动构建 Windows 时，触发工作流所选分支和输入的构建分支必须指向同一提交；
+请从要构建的分支触发工作流。构建使用该提交固定的校验摘要，不会在打包时重新获取。
+
+Windows PR 构建也会解析并校验对应资源。Windows 安装包将文件放在
+`resources/officecli/officecli.exe`；暂存目录 `resources/bundled-officecli/` 不入库。
+准备器拒绝覆盖已有暂存文件：本地构建失败时，需由使用者确认并手动处理旧文件，再重试。
+Windows 多架构包必须拆成独立构建，不能将同一二进制用于两个架构。
+`AIONUI_OFFICECLI_PREPARED_ARCH` 是工作流准备成功后传给构建步骤的内部标记，
+本地使用时不得手动设置，否则会绕过构建入口的准备检查。
+当前 AionCore 固定版本尚不支持私有模式，Windows 构建会失败；必须发布并确认兼容版本后再更新版本和批准列表。
+没有 `aionui-release-manifest.json` 的旧 Release 不能使用自动分发流程。
+
+依赖无关的针对性测试：
+
+```shell
+node --test packages/shared-scripts/src/prepare-officecli.test.js packages/shared-scripts/src/officecli-matrix.test.js packages/shared-scripts/src/officecli-workflows.test.js packages/shared-scripts/src/officecli-build-gate.test.js
+```
+
 ## 架构概览
 
 ```

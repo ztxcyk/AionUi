@@ -702,6 +702,20 @@ let restorePackageVersionOverride = () => {};
 let buildFailed = false;
 
 try {
+  const hasPlatformArg = args.some((arg) =>
+    ['--win', '--windows', '-w', '--mac', '-m', '--linux', '-l', '--all'].includes(arg)
+  );
+  const windowsBuild =
+    args.some((arg) => ['--win', '--windows', '-w', '--all'].includes(arg)) ||
+    (!hasPlatformArg && process.platform === 'win32');
+  if (!packOnly && windowsBuild) {
+    const {
+      assertPrivateModeRelease,
+      prepareWindowsOfficeCli,
+    } = require('../packages/shared-scripts/src/officecli-build-gate');
+    assertPrivateModeRelease({ version: JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).aioncoreVersion });
+    prepareWindowsOfficeCli({ arch: targetArch, multiArch });
+  }
   restorePackageVersionOverride = applyDebugAutoUpdateVersionOverride(packageJsonPath);
 
   // 1. Ensure package.json main entry is correct for electron-vite

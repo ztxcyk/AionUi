@@ -35,6 +35,11 @@
 !define AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_ACTION_EN "Download a fresh installer and run it again. If it still fails, send the installer report to the AionUi team."
 !define AIONUI_MSG_BUNDLED_AIONCORE_INCOMPLETE_ACTION_ZH "请重新下载安装器后再次运行。如果仍然失败，请将安装失败报告发送给 AionUi 团队。"
 
+!define AIONUI_MSG_OFFICECLI_INCOMPLETE_EN "The bundled OfficeCLI is missing, empty, or cannot run the required commands (--version and watch --help)."
+!define AIONUI_MSG_OFFICECLI_INCOMPLETE_ZH "内置 OfficeCLI 缺失、为空或无法运行必需命令（--version 和 watch --help）。"
+!define AIONUI_MSG_OFFICECLI_INCOMPLETE_ACTION_EN "Download a complete AionUi installer and reinstall. Check the installer log for resources\officecli\officecli.exe. If it still fails, send the installer failure report to the AionUi team."
+!define AIONUI_MSG_OFFICECLI_INCOMPLETE_ACTION_ZH "请下载完整的 AionUi 安装包后重新安装，并查看安装日志中的 resources\officecli\officecli.exe 诊断。如果仍然失败，请将安装失败报告发送给 AionUi 团队。"
+
 !define AIONUI_MSG_ARCH_MISMATCH_EN "Installation package architecture mismatch."
 !define AIONUI_MSG_ARCH_MISMATCH_ZH "安装包架构不匹配。"
 !define AIONUI_MSG_ARCH_MISMATCH_ACTION_EN "Download the AionUi installer that matches this Windows architecture, then run it again."

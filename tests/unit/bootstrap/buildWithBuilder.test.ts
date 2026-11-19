@@ -231,7 +231,7 @@ childProcess.execSync = function mockedExecSync(command) {
     expect(cannotCloseBranch).not.toMatch(/^\s*Quit\s*$/m);
   });
 
-  it('covers each of the 12 Windows installer error codes with one explicit e2e scenario', () => {
+  it('covers each of the 13 Windows installer error codes with one explicit e2e scenario', () => {
     const expectedDefinitions = readInstallerErrorDefinitions();
     const result = spawnSync(
       process.execPath,
@@ -250,11 +250,11 @@ childProcess.execSync = function mockedExecSync(command) {
     const scenarioDefineNames = matrix.scenarios?.map((scenario) => scenario.defineName);
     const scenarioIds = matrix.scenarios?.map((scenario) => scenario.id);
 
-    expect(expectedDefinitions).toHaveLength(12);
-    expect(new Set(expectedCodes).size).toBe(12);
+    expect(expectedDefinitions).toHaveLength(13);
+    expect(new Set(expectedCodes).size).toBe(13);
     expect(matrix.codes).toEqual(expectedCodes);
-    expect(matrix.scenarios).toHaveLength(12);
-    expect(new Set(scenarioIds).size).toBe(12);
+    expect(matrix.scenarios).toHaveLength(13);
+    expect(new Set(scenarioIds).size).toBe(13);
     expect(scenarioCodes).toEqual(expectedCodes);
     expect(scenarioDefineNames).toEqual(expectedDefineNames);
   });
@@ -294,6 +294,9 @@ function recordPrepareCall(options) {
 }
 
 Module._load = function patchedLoad(request, parent, isMain) {
+  if (request.endsWith('/officecli-build-gate')) {
+    return { assertPrivateModeRelease: () => {}, prepareWindowsOfficeCli: () => {} };
+  }
   if (request === './prepareAioncore' || request.endsWith('/prepareAioncore')) {
     return recordPrepareCall;
   }

@@ -215,9 +215,10 @@ const backendManager = new BackendLifecycleManager(
     version: app.getVersion(),
     isPackaged: app.isPackaged,
     resourcesPath: process.resourcesPath,
+    desktop: true,
     userDataPath: app.getPath('userData'),
   },
-  resolveBinaryPath
+  () => resolveBinaryPath(app.isPackaged)
 );
 let disposeCronResumeListener: (() => void) | null = null;
 
@@ -940,7 +941,8 @@ const handleAppReady = async (): Promise<void> => {
         app: {
           version: app.getVersion(),
           isPackaged: app.isPackaged,
-          resourcesPath: app.getAppPath(),
+          resourcesPath: process.resourcesPath,
+          desktop: true,
           // Same reason as dataDir below: webui.config.json must live next to
           // the DB under the CLI-safe symlink path, so every password-change
           // entry point (CLI --resetpass, settings-toggle IPC, browser login)

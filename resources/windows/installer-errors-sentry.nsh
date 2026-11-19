@@ -11,6 +11,7 @@
 !define AIONUI_E_DISK_INSUFFICIENT "E1020"
 !define AIONUI_E_BUNDLED_AIONCORE_INCOMPLETE "E1030"
 !define AIONUI_E_CORE_APP_FILES_INCOMPLETE "E1031"
+!define AIONUI_E_OFFICECLI_INCOMPLETE "E1032"
 !define AIONUI_E_ARCH_MISMATCH "E1040"
 !define AIONUI_E_ACTIVE_INSTALLER_CONFLICT "E1050"
 !define AIONUI_E_REGISTRY_STATE_INVALID "E1060"
@@ -45,8 +46,12 @@
   ${If} $9 == "no"
     !insertmacro AIONUI_SLOG "event=report-skipped reason=user-declined code=${_CODE}"
   ${ElseIf} $9 == "auto"
-    !insertmacro AIONUI_SLOG "event=report-auto reason=silent code=${_CODE}"
-    !insertmacro AIONUI_REPORT_TO_SENTRY_NOUI "${_CODE}" "${_DETAIL}"
+    ${If} "${_CODE}" == "${AIONUI_E_OFFICECLI_INCOMPLETE}"
+      !insertmacro AIONUI_SLOG "event=report-skipped reason=offline code=${_CODE}"
+    ${Else}
+      !insertmacro AIONUI_SLOG "event=report-auto reason=silent code=${_CODE}"
+      !insertmacro AIONUI_REPORT_TO_SENTRY_NOUI "${_CODE}" "${_DETAIL}"
+    ${EndIf}
   ${Else}
     !insertmacro AIONUI_REPORT_TO_SENTRY "${_CODE}" "${_DETAIL}"
   ${EndIf}

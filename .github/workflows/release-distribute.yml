@@ -42,6 +42,11 @@ jobs:
     # Skip prereleases: manual dispatch always runs, automatic event runs only when not a prerelease.
     if: vars.PUBLISH_RELEASE == 'true' && (github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false)
     steps:
+      - name: Checkout release validation tools
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
       - name: Extract version from tag
         id: version
         env:
@@ -101,7 +106,8 @@ jobs:
             --pattern "*.msi" \
             --pattern "*.deb" \
             --pattern "*.zip" \
-            --pattern "latest*.yml"
+            --pattern "latest*.yml" \
+            --pattern "aionui-release-manifest.json"
           echo "Downloaded files:"
           ls -la dist
 
@@ -112,14 +118,15 @@ jobs:
         run: |
           set -euo pipefail
 
+          selected=$(node packages/shared-scripts/src/release-windows-assets.js check-distribution dist "$VERSION")
           metadata_files=(
-            dist/latest.yml
-            dist/latest-win-arm64.yml
             dist/latest-mac.yml
             dist/latest-arm64-mac.yml
             dist/latest-linux.yml
             dist/latest-linux-arm64.yml
           )
+          [[ ",$selected," == *,x64,* ]] && metadata_files+=(dist/latest.yml)
+          [[ ",$selected," == *,arm64,* ]] && metadata_files+=(dist/latest-win-arm64.yml)
 
           for file in "${metadata_files[@]}"; do
             if [ ! -f "$file" ]; then
@@ -156,15 +163,16 @@ jobs:
       - name: Upload updater metadata
         env:
           S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          FILES: ${{ steps.metadata.outputs.files }}
         run: |
           set -euo pipefail
 
-          aws s3 cp dist/ "s3://${S3_BUCKET}/${S3_RELEASE_PREFIX}/" \
-            --recursive \
-            --exclude "*" \
-            --include "latest*.yml" \
-            --content-type "text/yaml" \
-            --cache-control "public, max-age=60"
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            aws s3 cp "dist/$file" "s3://${S3_BUCKET}/${S3_RELEASE_PREFIX}/$file" \
+              --content-type "text/yaml" \
+              --cache-control "public, max-age=60"
+          done <<< "$FILES"
           echo "Uploaded updater metadata"
 
       - name: Summary

@@ -201,9 +201,29 @@ Var /GLOBAL AionUiActiveMarkerResult
   ${EndIf}
 !macroend
 
+!macro AIONUI_VERIFY_BUNDLED_OFFICECLI_RESOURCES
+  InitPluginsDir
+  File "/oname=$PLUGINSDIR\verify-officecli-install.ps1" "${PROJECT_DIR}\resources\windows\support\verify-officecli-install.ps1"
+  nsExec::Exec `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\verify-officecli-install.ps1" -InstallDir "$INSTDIR" -LogPath "$AionUiSessionLogPath"`
+  Pop $AionUiVerifyResourceResult
+
+  ${If} $AionUiVerifyResourceResult != 0
+    !insertmacro AIONUI_FAIL_UX \
+      "${AIONUI_E_OFFICECLI_INCOMPLETE}" \
+      "officecli-incomplete result=$AionUiVerifyResourceResult path=resources\officecli\officecli.exe" \
+      "${AIONUI_MSG_OFFICECLI_INCOMPLETE_ZH}" \
+      "${AIONUI_MSG_OFFICECLI_INCOMPLETE_EN}" \
+      "${AIONUI_MSG_OFFICECLI_INCOMPLETE_ACTION_ZH}" \
+      "${AIONUI_MSG_OFFICECLI_INCOMPLETE_ACTION_EN}" \
+      "officecli-incomplete result=$AionUiVerifyResourceResult path=resources\officecli\officecli.exe instDir=$INSTDIR" \
+      "officecli-incomplete result=$AionUiVerifyResourceResult path=resources\officecli\officecli.exe instDir=$INSTDIR"
+  ${EndIf}
+!macroend
+
 !macro customInstall
   !insertmacro AIONUI_VERIFY_CORE_APP_FILES
   !insertmacro AIONUI_VERIFY_BUNDLED_AIONCORE_RESOURCES "${AIONUI_RUNTIME_KEY}"
+  !insertmacro AIONUI_VERIFY_BUNDLED_OFFICECLI_RESOURCES
   !insertmacro AIONUI_LOG_EVENT "verify-install ok instDir=$INSTDIR"
   !insertmacro AIONUI_CLEAR_ACTIVE_INSTALLER_MARKER
   !insertmacro AIONUI_SESSION_SUCCESS

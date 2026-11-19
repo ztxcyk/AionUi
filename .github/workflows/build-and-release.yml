@@ -53,23 +53,34 @@ jobs:
       - name: Run unit tests
         run: bunx vitest run
 
+  prepare-matrix:
+    name: Prepare Build Matrix
+    runs-on: ubuntu-latest
+    if: vars.PUBLISH_RELEASE == 'true' && (github.ref == 'refs/heads/dev' || (startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-dev-')))
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      release_info: ${{ steps.set-matrix.outputs.release_info }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate build matrix
+        id: set-matrix
+        run: node scripts/prepareOfficeCliMatrix.js
+        env:
+          AIONUI_BUILD_PLATFORM: all
+
   build-pipeline:
     name: Build Pipeline
     uses: ./.github/workflows/_build-reusable.yml
-    needs: code-quality
+    needs: [code-quality, prepare-matrix]
     # dev 分支或正式 tag 触发构建（排除 -dev- tag，避免重复构建）
-    if: vars.PUBLISH_RELEASE == 'true' && needs.code-quality.result == 'success' && (github.ref == 'refs/heads/dev' || (startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-dev-')))
+    if: vars.PUBLISH_RELEASE == 'true' && needs.code-quality.result == 'success' && needs.prepare-matrix.result == 'success' && (github.ref == 'refs/heads/dev' || (startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-dev-')))
     with:
       skip_code_quality: true
-      matrix: >-
-        {"include":[
-          {"platform":"macos-arm64","os":"macos-14","command":"node scripts/build-with-builder.js arm64 --mac --arm64","artifact-name":"macos-build-arm64","arch":"arm64"},
-          {"platform":"macos-x64","os":"macos-14","command":"node scripts/build-with-builder.js x64 --mac --x64","artifact-name":"macos-build-x64","arch":"x64"},
-          {"platform":"windows-x64","os":"windows-2022","command":"node scripts/build-with-builder.js x64 --win --x64","artifact-name":"windows-build-x64","arch":"x64"},
-          {"platform":"windows-arm64","os":"windows-11-arm","command":"node scripts/build-with-builder.js arm64 --win --arm64","artifact-name":"windows-build-arm64","arch":"arm64"},
-          {"platform":"linux-x64","os":"ubuntu-latest","command":"node scripts/build-with-builder.js x64 --linux --x64","artifact-name":"linux-build-x64","arch":"x64"},
-          {"platform":"linux-arm64","os":"ubuntu-24.04-arm","command":"node scripts/build-with-builder.js arm64 --linux --arm64","artifact-name":"linux-build-arm64","arch":"arm64"}
-        ]}
+      matrix: ${{ needs.prepare-matrix.outputs.matrix }}
+      officecli_release_info: ${{ needs.prepare-matrix.outputs.release_info }}
     secrets: inherit
 
   pack-web-cli:
@@ -256,7 +267,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [code-quality, build-pipeline, create-tag, pack-web-cli]
+    needs: [code-quality, prepare-matrix, build-pipeline, create-tag, pack-web-cli]
     # Tag 推送时 create-tag 会被跳过，所以需要检查两种情况（排除 -dev- tag 避免重复）
     if: always() && needs.code-quality.result == 'success' && (needs.create-tag.result == 'success' || (startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-dev-'))) && (vars.PUBLISH_RELEASE != 'true' || (needs.build-pipeline.result == 'success' && needs.pack-web-cli.result == 'success'))
     # dev 分支使用 dev-release 环境，正式 tag 使用 release 环境
@@ -295,7 +306,11 @@ jobs:
       - name: Prepare release assets (normalize updater metadata)
         if: vars.PUBLISH_RELEASE == 'true'
         shell: bash
-        run: bash scripts/prepare-release-assets.sh build-artifacts release-assets
+        env:
+          AIONUI_BUILD_MATRIX: ${{ needs.prepare-matrix.outputs.matrix }}
+        run: |
+          bash scripts/prepare-release-assets.sh build-artifacts release-assets
+          test -f release-assets/aionui-release-manifest.json
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -311,6 +326,7 @@ jobs:
             release-assets/**/*.yml
             release-assets/**/*.tar.gz
             release-assets/**/*.sha256
+            release-assets/aionui-release-manifest.json
             release-assets/install-web.sh
           generate_release_notes: true
           draft: true

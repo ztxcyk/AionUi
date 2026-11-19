@@ -11,6 +11,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { mkdirSync, statSync } from 'node:fs';
 import { connect, createServer, type Socket } from 'node:net';
+import { win32 } from 'node:path';
 import { cleanupRegisteredAgentProcesses } from './agent-process-registry.js';
 import type { AppMetadata, BackendBinaryResolver } from './types.js';
 
@@ -221,20 +222,29 @@ export function buildSpawnArgs(config: SpawnConfig): string[] {
  * backend's `/api/system/info` matches what Electron main persists in
  * ProcessEnv('aionui.dir').
  */
-export function buildSpawnEnv(dirs?: BackendDirConfig): NodeJS.ProcessEnv {
+export function buildSpawnEnv(dirs?: BackendDirConfig, app?: AppMetadata): NodeJS.ProcessEnv {
   // PREBUILDS_ONLY protects the packaged Electron process's own node-gyp-build
   // natives (see desktop process/index.ts) and must stay scoped to it. Agent
   // CLIs spawned under aioncore (e.g. cursor-agent) ship natives under
   // build/Release only, and node-gyp-build skips that directory for any
   // non-empty value, aborting the agent before the ACP handshake (#4070).
   const { PREBUILDS_ONLY: _prebuildsOnly, ...parentEnv } = process.env;
-  if (!dirs) return parentEnv;
-  return {
+  const env: NodeJS.ProcessEnv = {
     ...parentEnv,
-    AIONUI_CACHE_DIR: dirs.cacheDir,
-    AIONUI_WORK_DIR: dirs.workDir,
-    AIONUI_LOG_DIR: dirs.logDir,
+    ...(dirs && {
+      AIONUI_CACHE_DIR: dirs.cacheDir,
+      AIONUI_WORK_DIR: dirs.workDir,
+      AIONUI_LOG_DIR: dirs.logDir,
+    }),
   };
+  if (process.platform === 'win32' && app?.isPackaged && app.desktop) {
+    if (!win32.isAbsolute(app.resourcesPath)) throw new Error('Desktop resources path must be absolute');
+    for (const key of Object.keys(env)) {
+      if (key.toUpperCase() === 'AIONUI_OFFICECLI_PRIVATE_PATH') delete env[key];
+    }
+    env.AIONUI_OFFICECLI_PRIVATE_PATH = win32.join(app.resourcesPath, 'officecli', 'officecli.exe');
+  }
+  return env;
 }
 
 const FETCH_FORBIDDEN_PORTS = new Set([
@@ -689,7 +699,7 @@ export class BackendLifecycleManager {
     try {
       this.childProcess = spawn(binaryPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: buildSpawnEnv(dirs),
+        env: buildSpawnEnv(dirs, this.appMeta),
         cwd: dirs?.workDir ?? dbPath,
         detached: process.platform !== 'win32',
       });

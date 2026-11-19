@@ -13,28 +13,32 @@ mkdir -p "$ARTIFACTS_DIR/linux-build-x64"
 mkdir -p "$ARTIFACTS_DIR/linux-build-arm64"
 
 # Windows x64
-touch "$ARTIFACTS_DIR/windows-build-x64/AionUi-1.0.0-win-x64.exe"
-cat > "$ARTIFACTS_DIR/windows-build-x64/latest.yml" <<'EOF'
+printf 'mock x64 installer\n' > "$ARTIFACTS_DIR/windows-build-x64/AionUi-1.0.0-win-x64.exe"
+X64_SHA512=$(node -e "const f=process.argv[1]; process.stdout.write(require('node:crypto').createHash('sha512').update(require('node:fs').readFileSync(f)).digest('base64'))" "$ARTIFACTS_DIR/windows-build-x64/AionUi-1.0.0-win-x64.exe")
+X64_SIZE=$(node -p "require('node:fs').statSync(process.argv[1]).size" "$ARTIFACTS_DIR/windows-build-x64/AionUi-1.0.0-win-x64.exe")
+cat > "$ARTIFACTS_DIR/windows-build-x64/latest.yml" <<EOF
 version: 1.0.0
 files:
   - url: AionUi-1.0.0-win-x64.exe
-    sha512: fake-sha512-x64
-    size: 100000
+    sha512: ${X64_SHA512}
+    size: ${X64_SIZE}
 path: AionUi-1.0.0-win-x64.exe
-sha512: fake-sha512-x64
+sha512: ${X64_SHA512}
 releaseDate: '2025-01-01'
 EOF
 
 # Windows arm64
-touch "$ARTIFACTS_DIR/windows-build-arm64/AionUi-1.0.0-win-arm64.exe"
-cat > "$ARTIFACTS_DIR/windows-build-arm64/latest.yml" <<'EOF'
+printf 'mock arm64 installer\n' > "$ARTIFACTS_DIR/windows-build-arm64/AionUi-1.0.0-win-arm64.exe"
+ARM64_SHA512=$(node -e "const f=process.argv[1]; process.stdout.write(require('node:crypto').createHash('sha512').update(require('node:fs').readFileSync(f)).digest('base64'))" "$ARTIFACTS_DIR/windows-build-arm64/AionUi-1.0.0-win-arm64.exe")
+ARM64_SIZE=$(node -p "require('node:fs').statSync(process.argv[1]).size" "$ARTIFACTS_DIR/windows-build-arm64/AionUi-1.0.0-win-arm64.exe")
+cat > "$ARTIFACTS_DIR/windows-build-arm64/latest.yml" <<EOF
 version: 1.0.0
 files:
   - url: AionUi-1.0.0-win-arm64.exe
-    sha512: fake-sha512-arm64
-    size: 100000
+    sha512: ${ARM64_SHA512}
+    size: ${ARM64_SIZE}
 path: AionUi-1.0.0-win-arm64.exe
-sha512: fake-sha512-arm64
+sha512: ${ARM64_SHA512}
 releaseDate: '2025-01-01'
 EOF
 

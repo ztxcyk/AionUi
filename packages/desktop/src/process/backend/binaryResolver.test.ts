@@ -14,6 +14,8 @@ vi.mock('node:fs', () => ({
 }));
 
 const originalResourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
+const originalPlatform = process.platform;
+const originalOverride = process.env.AIONUI_BACKEND_BIN;
 
 function setResourcesPath(resourcesPath: string | undefined): void {
   Object.defineProperty(process, 'resourcesPath', {
@@ -32,10 +34,38 @@ function dirEntry(name: string, isDirectory = false): ReturnType<typeof readdirS
 describe('resolveBinaryPath', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.AIONUI_BACKEND_BIN;
   });
 
   afterEach(() => {
     setResourcesPath(originalResourcesPath);
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
+    if (originalOverride === undefined) delete process.env.AIONUI_BACKEND_BIN;
+    else process.env.AIONUI_BACKEND_BIN = originalOverride;
+  });
+
+  it('uses only the bundled backend on packaged Windows even with an override and PATH', () => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    setResourcesPath('/app/resources');
+    process.env.AIONUI_BACKEND_BIN = '/unapproved/aioncore.exe';
+    const bundled = join('/app/resources', 'bundled-aioncore', `win32-${process.arch}`, 'aioncore.exe');
+    vi.mocked(existsSync).mockImplementation((p) => p === bundled);
+    expect(resolveBinaryPath(true)).toBe(bundled);
+    expect(execSync).not.toHaveBeenCalled();
+
+    vi.mocked(existsSync).mockReturnValue(false);
+    expect(() => resolveBinaryPath(true)).toThrow('bundled');
+    expect(execSync).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['win32', false],
+    ['linux', true],
+  ])('preserves override resolution on %s with packaged=%s', (platform, isPackaged) => {
+    Object.defineProperty(process, 'platform', { value: platform });
+    process.env.AIONUI_BACKEND_BIN = 'custom-aioncore';
+    vi.mocked(existsSync).mockReturnValue(true);
+    expect(resolveBinaryPath(isPackaged)).toContain('custom-aioncore');
   });
 
   it('attaches bundled path diagnostics when aioncore cannot be resolved', () => {

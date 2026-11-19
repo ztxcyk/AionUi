@@ -110,6 +110,10 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Test OfficeCLI install verifier (Windows unit tests)
+        if: matrix.os == 'windows-2022'
+        run: node --test packages/shared-scripts/src/verify-officecli-install.test.js
+
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -132,6 +136,10 @@ jobs:
 
       - name: Run extension system tests
         run: bunx vitest run
+
+      - name: Run OfficeCLI helper tests (Windows only)
+        if: matrix.os == 'windows-2022'
+        run: node --test packages/shared-scripts/src/prepare-officecli.test.js packages/shared-scripts/src/officecli-matrix.test.js packages/shared-scripts/src/officecli-workflows.test.js packages/shared-scripts/src/officecli-build-gate.test.js
 
   # Job 3: Coverage test (Linux only)
   coverage-tests:
@@ -306,6 +314,16 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Test OfficeCLI install verifier (Windows)
+        if: startsWith(matrix.platform, 'windows')
+        run: node --test packages/shared-scripts/src/verify-officecli-install.test.js
+
+      - name: Check Windows AionCore private-mode release
+        if: startsWith(matrix.platform, 'windows')
+        shell: bash
+        run: |
+          node -e "require('./packages/shared-scripts/src/officecli-build-gate').assertPrivateModeRelease({version: require('./package.json').aioncoreVersion})"
+
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -371,6 +389,23 @@ jobs:
         with:
           vs-version: '17.0'
 
+      - name: Prepare OfficeCLI (Windows x64)
+        id: prepare-officecli
+        if: matrix.platform == 'windows-x64'
+        shell: pwsh
+        env:
+          AIONUI_OFFICECLI_ARCH: ${{ matrix.arch }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = node scripts/prepareOfficeCli.js --resolve-release
+          if ($LASTEXITCODE -ne 0) { throw "OfficeCLI release resolution failed with exit code $LASTEXITCODE" }
+          if ([string]::IsNullOrWhiteSpace($release)) { throw 'Missing resolved OfficeCLI release information' }
+          Write-Host "Selected OfficeCLI release: $(($release | ConvertFrom-Json).tag)"
+          $env:AIONUI_OFFICECLI_RELEASE_INFO = $release
+          node scripts/prepareOfficeCli.js
+          if ($LASTEXITCODE -ne 0) { throw "OfficeCLI preparation failed with exit code $LASTEXITCODE" }
+          "release_info=$release" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Build test (Windows x64)
         if: matrix.platform == 'windows-x64'
         shell: pwsh
@@ -379,8 +414,11 @@ jobs:
           Write-Host "BUILD TEST: ${{ matrix.platform }}"
           Write-Host "=========================================="
           node scripts/build-with-builder.js x64 --win --x64
+          if ($LASTEXITCODE -ne 0) { throw "Windows build failed with exit code $LASTEXITCODE" }
           Write-Host "✓Build test passed for ${{ matrix.platform }}"
         env:
+          AIONUI_OFFICECLI_PREPARED_ARCH: ${{ matrix.arch }}
+          AIONUI_OFFICECLI_RELEASE_INFO: ${{ steps.prepare-officecli.outputs.release_info }}
           NODE_OPTIONS: '--max-old-space-size=8192'
           npm_config_runtime: electron
           npm_config_arch: x64
@@ -446,7 +484,10 @@ jobs:
           }
 
           Write-Host "Using installer: $($installer.FullName)"
-          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -NoNewWindow
+          $installProcess = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -NoNewWindow -PassThru
+          if ($installProcess.ExitCode -ne 0) {
+            throw "Silent install failed with exit code $($installProcess.ExitCode)"
+          }
 
           $candidates = @(
             "$env:LOCALAPPDATA\\Programs\\AionUi\\AionUi.exe",
@@ -460,6 +501,18 @@ jobs:
           }
 
           Write-Host "Installed executable: $installedExe"
+
+          # 复用安装期校验，两个探测均只在子进程设置 OFFICECLI_SKIP_UPDATE=1。
+          $officeCliVerifier = Join-Path $PWD 'resources\windows\support\verify-officecli-install.ps1'
+          $officeCliLog = Join-Path $PWD 'officecli-install-smoke.jsonl'
+          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $officeCliVerifier -InstallDir (Split-Path -Parent $installedExe) -LogPath $officeCliLog
+          $verifyExitCode = $LASTEXITCODE
+          if (Test-Path -LiteralPath $officeCliLog) {
+            Get-Content -LiteralPath $officeCliLog
+          }
+          if ($verifyExitCode -ne 0) {
+            throw "Bundled OfficeCLI executable/capability verification failed (exit $verifyExitCode)"
+          }
 
       - name: Install smoke test (macOS arm64)
         if: matrix.platform == 'macos-arm64'
@@ -520,6 +573,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test release and OfficeCLI packaging validation
+        run: >-
+          node --test
+          packages/shared-scripts/src/release-scripts-integration.test.js
+          packages/shared-scripts/src/release-windows-assets.test.js
+          packages/shared-scripts/src/verify-packed-officecli.test.js
+          packages/shared-scripts/src/officecli-build-gate.test.js
+          packages/shared-scripts/src/officecli-snapshot.test.js
+          packages/shared-scripts/src/officecli-matrix.test.js
+          packages/shared-scripts/src/prepare-officecli.test.js
+
       - name: Create mock build artifacts
         shell: bash
         run: bash scripts/create-mock-release-artifacts.sh build-artifacts
@@ -528,6 +597,7 @@ jobs:
         shell: bash
         env:
           MOCK_VERSION: '1.0.0'
+          AIONUI_BUILD_MATRIX: '{"include":[{"platform":"windows-x64","arch":"x64","artifact-name":"windows-build-x64"},{"platform":"windows-arm64","arch":"arm64","artifact-name":"windows-build-arm64"}]}'
         run: bash scripts/prepare-release-assets.sh build-artifacts release-assets
 
       - name: Validate script output

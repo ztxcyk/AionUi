@@ -229,6 +229,29 @@ describe('buildSpawnArgs', () => {
 });
 
 describe('buildSpawnEnv', () => {
+  it('uses the bundled private path only for packaged Windows without mutating the parent', () => {
+    const previous = process.env.AIONUI_OFFICECLI_PRIVATE_PATH;
+    process.env.AIONUI_OFFICECLI_PRIVATE_PATH = 'parent-value';
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const app = { ...APP_META_PACKAGED, resourcesPath: 'C:\\Program Files\\AionUi\\resources', desktop: true };
+    try {
+      const env = buildSpawnEnv(undefined, app);
+      expect(env.AIONUI_OFFICECLI_PRIVATE_PATH).toBe('C:\\Program Files\\AionUi\\resources\\officecli\\officecli.exe');
+      expect(process.env.AIONUI_OFFICECLI_PRIVATE_PATH).toBe('parent-value');
+      expect(env.PATH).toBe(process.env.PATH);
+      expect(buildSpawnEnv(undefined, { ...app, isPackaged: false }).AIONUI_OFFICECLI_PRIVATE_PATH).toBe(
+        'parent-value'
+      );
+      expect(buildSpawnEnv(undefined, { ...app, desktop: false }).AIONUI_OFFICECLI_PRIVATE_PATH).toBe('parent-value');
+      expect(() => buildSpawnEnv(undefined, { ...app, resourcesPath: 'relative' })).toThrow(/absolute/i);
+      platform.mockReturnValue('linux');
+      expect(buildSpawnEnv(undefined, app).AIONUI_OFFICECLI_PRIVATE_PATH).toBe('parent-value');
+    } finally {
+      platform.mockRestore();
+      if (previous === undefined) delete process.env.AIONUI_OFFICECLI_PRIVATE_PATH;
+      else process.env.AIONUI_OFFICECLI_PRIVATE_PATH = previous;
+    }
+  });
   it('merges process.env with AIONUI_* dir vars', () => {
     const env = buildSpawnEnv({
       cacheDir: '/c',
@@ -349,6 +372,21 @@ describe('findAvailablePort', () => {
 });
 
 describe('BackendLifecycleManager.start (success path)', () => {
+  it('passes the packaged Windows private path to the actual backend spawn', async () => {
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    vi.mocked(spawn).mockImplementationOnce(() => {
+      throw new Error('test spawn');
+    });
+    try {
+      const app = { ...APP_META_PACKAGED, resourcesPath: 'C:\\App\\resources', desktop: true };
+      const mgr = new BackendLifecycleManager(app, () => 'C:\\App\\aioncore.exe');
+      await expect(mgr.start('C:\\data')).rejects.toThrow('spawn threw');
+      const opts = vi.mocked(spawn).mock.calls[0][2] as { env: NodeJS.ProcessEnv };
+      expect(opts.env.AIONUI_OFFICECLI_PRIVATE_PATH).toBe('C:\\App\\resources\\officecli\\officecli.exe');
+    } finally {
+      platform.mockRestore();
+    }
+  });
   it('lets aioncore choose the backend port and waits for the reported listening event', async () => {
     vi.mocked(createServer).mockImplementation(() => {
       throw new Error('launcher must not pre-bind backend ports');

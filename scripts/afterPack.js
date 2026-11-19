@@ -9,6 +9,8 @@ const {
   getModulesToRebuild,
 } = require('./rebuildNativeModules');
 const { verifyBundledAioncoreResources } = require('../packages/shared-scripts/src/verify-bundled-aioncore-resources');
+const { assertPrivateModeRelease } = require('../packages/shared-scripts/src/officecli-build-gate');
+const { verifyPackedOfficeCli } = require('../packages/shared-scripts/src/verify-packed-officecli');
 
 /**
  * afterPack hook for electron-builder
@@ -41,6 +43,21 @@ module.exports = async function afterPack(context) {
   const { arch, electronPlatformName, appOutDir, packager } = context;
   const targetArch = normalizeArch(typeof arch === 'string' ? arch : Arch[arch] || process.arch);
   const buildArch = normalizeArch(os.arch());
+
+  if (electronPlatformName === 'win32') {
+    const version = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8')).aioncoreVersion;
+    const manifestPath = path.join(appOutDir, 'resources', 'bundled-aioncore', `win32-${targetArch}`, 'manifest.json');
+    let manifest = null;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch {}
+    assertPrivateModeRelease({ version, arch: targetArch, manifest });
+    await verifyPackedOfficeCli({
+      resourcesDir: path.join(appOutDir, 'resources'),
+      arch: targetArch,
+      releaseJson: process.env.AIONUI_OFFICECLI_RELEASE_INFO,
+    });
+  }
 
   console.log(`\n🔧 afterPack hook started`);
   console.log(`   Platform: ${electronPlatformName}, Build arch: ${buildArch}, Target arch: ${targetArch}`);

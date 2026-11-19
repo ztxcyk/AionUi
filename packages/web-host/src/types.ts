@@ -8,6 +8,8 @@ export type AppMetadata = {
   isPackaged: boolean;
   resourcesPath: string;
   userDataPath: string;
+  // 桌面包包含 OfficeCLI；独立 Web CLI 不包含。
+  desktop?: boolean;
 };
 
 /**

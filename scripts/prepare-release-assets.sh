@@ -15,6 +15,9 @@ set -euo pipefail
 
 ARTIFACTS_DIR="${1:-build-artifacts}"
 OUTPUT_DIR="${2:-release-assets}"
+VERSION="${MOCK_VERSION:-$(node -p "require('./package.json').version")}"
+
+node packages/shared-scripts/src/release-windows-assets.js check-build "$ARTIFACTS_DIR" "$VERSION"
 
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
@@ -83,8 +86,10 @@ fi
 # ---------------------------------------------------------------------------
 echo "==> Collecting updater metadata ..."
 
-WIN_X64_LATEST=$(find "$ARTIFACTS_DIR" -type f -path "*/windows-build-x64/*" -name "latest.yml" | sort | head -n 1 || true)
-WIN_ARM64_LATEST=$(find "$ARTIFACTS_DIR" -type f -path "*/windows-build-arm64/*" -name "latest.yml" | sort | head -n 1 || true)
+WIN_X64_LATEST="$ARTIFACTS_DIR/windows-build-x64/latest.yml"
+WIN_ARM64_LATEST="$ARTIFACTS_DIR/windows-build-arm64/latest.yml"
+[ -f "$WIN_X64_LATEST" ] || WIN_X64_LATEST=""
+[ -f "$WIN_ARM64_LATEST" ] || WIN_ARM64_LATEST=""
 MAC_X64_LATEST=$(find "$ARTIFACTS_DIR" -type f -path "*/macos-build-x64/*" -name "latest-mac.yml" | sort | head -n 1 || true)
 MAC_ARM64_LATEST=$(find "$ARTIFACTS_DIR" -type f -path "*/macos-build-arm64/*" -name "latest-mac.yml" | sort | head -n 1 || true)
 LINUX_X64_LATEST=$(find "$ARTIFACTS_DIR" -type f -path "*/linux-build-x64/*" -name "latest-linux.yml" | sort | head -n 1 || true)
@@ -117,9 +122,8 @@ echo "==> Writing architecture-specific updater metadata ..."
 # ---------------------------------------------------------------------------
 echo "==> Validating required metadata ..."
 
-VERSION="${MOCK_VERSION:-$(node -p "require('./package.json').version")}"
 MISSING=0
-for required in latest.yml latest-mac.yml latest-linux.yml latest-linux-arm64.yml; do
+for required in latest-mac.yml latest-arm64-mac.yml latest-linux.yml latest-linux-arm64.yml; do
   if [ ! -f "$OUTPUT_DIR/$required" ]; then
     echo "::error::Missing required updater metadata: $required"
     MISSING=1
@@ -178,6 +182,7 @@ fi
 if [ "$MISSING" -ne 0 ]; then
   exit 1
 fi
+node packages/shared-scripts/src/release-windows-assets.js write-manifest "$OUTPUT_DIR" "$VERSION"
 
 echo ""
 echo "==> Prepared release assets:"

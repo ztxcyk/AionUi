@@ -206,8 +206,9 @@ function getAssetName(platform, arch, tag) {
   return `aioncore-${tag}-${normalizedArch}-${normalizedPlatform}${ext}`;
 }
 
-function getDownloadUrl(assetName, tag) {
-  return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/${assetName}`;
+function getReleaseDownloadUrl(platform, arch, tag) {
+  const assetName = getAssetName(platform, arch, tag);
+  return assetName ? `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/${assetName}` : null;
 }
 
 function downloadFile(url, outputPath) {
@@ -435,7 +436,7 @@ function downloadAndExtract(platform, arch, tag) {
     throw new Error(`Unsupported aioncore target: ${platform}-${arch}`);
   }
 
-  const url = getDownloadUrl(assetName, tag);
+  const url = getReleaseDownloadUrl(platform, arch, tag);
   const tempDir = path.join(os.tmpdir(), 'aioncore-prepare', tag, `${platform}-${arch}`);
   const archivePath = path.join(tempDir, assetName);
   const extractDir = path.join(tempDir, 'extracted');
@@ -615,6 +616,7 @@ function prepareAioncore(options) {
 module.exports = {
   getActionsArtifactMissingMessage,
   getActionsArtifactName,
+  getReleaseDownloadUrl,
   prepareAioncore,
   verifyPreparedAioncoreBundle,
 };

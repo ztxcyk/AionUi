@@ -76,6 +76,14 @@ const INSTALLER_ERROR_SCENARIOS = [
     diagnostics: 'scenario=core-app-files-incomplete phase=verify-required-file missing=resources/app.asar',
   },
   {
+    id: 'officecli-incomplete',
+    defineName: 'AIONUI_E_OFFICECLI_INCOMPLETE',
+    code: 'E1032',
+    message: 'The bundled OfficeCLI is missing, empty, or cannot run the required commands.',
+    action: 'Download a complete AionUi installer and reinstall. Check the installer log for details.',
+    diagnostics: 'scenario=officecli-incomplete phase=verify-officecli path=resources/officecli/officecli.exe result=1',
+  },
+  {
     id: 'arch-mismatch',
     defineName: 'AIONUI_E_ARCH_MISMATCH',
     code: 'E1040',
@@ -205,8 +213,8 @@ function getInstallerErrorScenarioMatrix() {
   const scenarioDefineNames = INSTALLER_ERROR_SCENARIOS.map((scenario) => scenario.defineName);
   const scenarioIds = INSTALLER_ERROR_SCENARIOS.map((scenario) => scenario.id);
 
-  if (definitions.length !== 12) {
-    throw new Error(`Expected 12 installer error code definitions, found ${definitions.length}: ${codes.join(', ')}`);
+  if (definitions.length !== 13) {
+    throw new Error(`Expected 13 installer error code definitions, found ${definitions.length}: ${codes.join(', ')}`);
   }
   if (new Set(codes).size !== definitions.length) {
     throw new Error(`Duplicate installer error codes in NSIS definitions: ${codes.join(', ')}`);
