@@ -57,7 +57,16 @@ describe('release packaging configuration', () => {
     const outputDir = resolve(tempDir, 'release-assets');
 
     try {
-      const env = { ...process.env, MOCK_VERSION: '1.0.0' };
+      const env = {
+        ...process.env,
+        MOCK_VERSION: '1.0.0',
+        AIONUI_BUILD_MATRIX: JSON.stringify({
+          include: [
+            { platform: 'windows-x64', arch: 'x64', 'artifact-name': 'windows-build-x64' },
+            { platform: 'windows-arm64', arch: 'arm64', 'artifact-name': 'windows-build-arm64' },
+          ],
+        }),
+      };
       const createResult = spawnSync('bash', ['scripts/create-mock-release-artifacts.sh', artifactsDir], {
         cwd: projectRoot,
         env,
