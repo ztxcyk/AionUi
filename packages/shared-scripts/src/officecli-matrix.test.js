@@ -44,15 +44,24 @@ describe('OfficeCLI build matrix', () => {
   });
 
   it('fails when the only requested Windows architecture is unavailable', async () => {
-    await assert.rejects(createBuildMatrix('windows-arm64', async () => release([x64])), /no requested Windows/i);
-    await assert.rejects(createBuildMatrix('all', async () => release([])), /no supported Windows/i);
+    await assert.rejects(
+      createBuildMatrix('windows-arm64', async () => release([x64])),
+      /no requested Windows/i
+    );
+    await assert.rejects(
+      createBuildMatrix('all', async () => release([])),
+      /no supported Windows/i
+    );
   });
 
   it('does not resolve a release for a non-Windows-only request', async () => {
     const result = await createBuildMatrix('linux-x64', async () => {
       throw new Error('must not resolve');
     });
-    assert.deepEqual(result.matrix.include.map((item) => item.platform), ['linux-x64']);
+    assert.deepEqual(
+      result.matrix.include.map((item) => item.platform),
+      ['linux-x64']
+    );
     assert.equal(result.releaseInfo, '');
   });
 
@@ -63,12 +72,18 @@ describe('OfficeCLI build matrix', () => {
       }),
       /SHA256SUMS/
     );
-    await assert.rejects(createBuildMatrix('unknown', async () => release([x64])), /unsupported platform/i);
+    await assert.rejects(
+      createBuildMatrix('unknown', async () => release([x64])),
+      /unsupported platform/i
+    );
   });
 
   it('rejects a malformed snapshot before publishing the Windows matrix', async () => {
     const bad = { ...release([x64]), checksums: { [x64]: 'bad' } };
-    await assert.rejects(createBuildMatrix('all', async () => bad), /checksum/i);
+    await assert.rejects(
+      createBuildMatrix('all', async () => bad),
+      /checksum/i
+    );
   });
 
   it('passes the matrix release JSON to both preparers without another latest lookup', async () => {

@@ -71,11 +71,12 @@ it('accepts the workflow-prepared resource only with matching architecture and r
     /release/i
   );
   assert.throws(
-    () => prepareWindowsOfficeCli({
-      arch: 'x64',
-      env: { AIONUI_OFFICECLI_PREPARED_ARCH: 'x64', AIONUI_OFFICECLI_RELEASE_INFO: 'not json' },
-      run,
-    }),
+    () =>
+      prepareWindowsOfficeCli({
+        arch: 'x64',
+        env: { AIONUI_OFFICECLI_PREPARED_ARCH: 'x64', AIONUI_OFFICECLI_RELEASE_INFO: 'not json' },
+        run,
+      }),
     /JSON/i
   );
 });
@@ -87,8 +88,13 @@ it('resolves a local release once and passes the same JSON to preparation and af
   prepareWindowsOfficeCli({
     arch: 'x64',
     env,
-    resolveRelease: () => { resolutions++; return releaseInfo; },
-    run: (_arch, actualEnv) => { preparedInfo = actualEnv.AIONUI_OFFICECLI_RELEASE_INFO; },
+    resolveRelease: () => {
+      resolutions++;
+      return releaseInfo;
+    },
+    run: (_arch, actualEnv) => {
+      preparedInfo = actualEnv.AIONUI_OFFICECLI_RELEASE_INFO;
+    },
   });
   assert.equal(resolutions, 1);
   assert.equal(preparedInfo, releaseInfo);
@@ -234,7 +240,10 @@ it('rejects direct Windows electron-builder packaging but leaves non-Windows pac
   const module = { exports: {} };
   const load = vm.runInThisContext(`(function(require, module, __dirname) { ${source}\n})`);
   load(fakeRequire, module, path.dirname(filename));
-  await assert.rejects(module.exports({ arch: 'x64', electronPlatformName: 'win32', appOutDir: root }), /private.mode/i);
+  await assert.rejects(
+    module.exports({ arch: 'x64', electronPlatformName: 'win32', appOutDir: root }),
+    /private.mode/i
+  );
   assert.equal(checked, false);
   await module.exports({ arch: 'x64', electronPlatformName: 'linux', appOutDir: root });
   assert.equal(checked, true);
@@ -252,14 +261,21 @@ it('afterPack validates the final Windows resource with the build release inform
     if (name === './rebuildNativeModules') return { normalizeArch: (arch) => arch };
     if (name.includes('verify-bundled-aioncore-resources')) return {};
     if (name.includes('officecli-build-gate')) return { assertPrivateModeRelease: () => {} };
-    if (name.includes('verify-packed-officecli')) return {
-      verifyPackedOfficeCli: async (options) => { actual = options; throw new Error('verification failed'); },
-    };
+    if (name.includes('verify-packed-officecli'))
+      return {
+        verifyPackedOfficeCli: async (options) => {
+          actual = options;
+          throw new Error('verification failed');
+        },
+      };
     return require(name);
   };
   const module = { exports: {} };
   const load = vm.runInThisContext(`(function(require, module, __dirname, process) { ${source}\n})`);
   load(fakeRequire, module, path.dirname(filename), { env: { AIONUI_OFFICECLI_RELEASE_INFO: releaseInfo } });
-  await assert.rejects(module.exports({ arch: 'x64', electronPlatformName: 'win32', appOutDir: root }), /verification failed/);
+  await assert.rejects(
+    module.exports({ arch: 'x64', electronPlatformName: 'win32', appOutDir: root }),
+    /verification failed/
+  );
   assert.deepEqual(actual, { resourcesDir: path.join(root, 'resources'), arch: 'x64', releaseJson: releaseInfo });
 });

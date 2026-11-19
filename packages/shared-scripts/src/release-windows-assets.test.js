@@ -72,7 +72,10 @@ it('rejects invalid matrices, unexpected old windows artifacts and malformed or 
   empty.entries.set(path.join('root', 'windows-build-x64', `AionUi-${version}-win-x64.exe`), '');
   assert.throws(() => validateBuild(fromMatrix(matrix(['x64']), version), 'root', empty), /empty/i);
   const stale = files(['x64', 'arm64'], 'dist');
-  assert.throws(() => validateDistribution(fromMatrix(matrix(['x64']), version), 'root', version, stale), /unexpected/i);
+  assert.throws(
+    () => validateDistribution(fromMatrix(matrix(['x64']), version), 'root', version, stale),
+    /unexpected/i
+  );
   const modified = files(['x64'], 'dist');
   modified.entries.set(path.join('root', `AionUi-${version}-win-x64.exe`), 'replaced installer');
   assert.throws(() => validateDistribution(fromMatrix(matrix(['x64']), version), 'root', version, modified), /SHA512/i);
@@ -89,10 +92,16 @@ it('fails closed without a manifest, including for otherwise complete legacy rel
 });
 
 it('rejects unselected Windows metadata in either single-architecture release', () => {
-  for (const [selected, stale] of [['x64', 'latest-win-arm64.yml'], ['arm64', 'latest.yml']]) {
+  for (const [selected, stale] of [
+    ['x64', 'latest-win-arm64.yml'],
+    ['arm64', 'latest.yml'],
+  ]) {
     const dist = files([selected], 'dist');
     dist.entries.set(path.join('root', stale), `version: ${version}\n`);
-    assert.throws(() => validateDistribution(fromMatrix(matrix([selected]), version), 'root', version, dist), /unexpected/i);
+    assert.throws(
+      () => validateDistribution(fromMatrix(matrix([selected]), version), 'root', version, dist),
+      /unexpected/i
+    );
   }
 });
 

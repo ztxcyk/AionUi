@@ -6,7 +6,13 @@ const { normalizeReleaseInfo, WINDOWS_ASSETS } = require('./prepare-officecli');
 // 发布并验证私有模式后，仅将已确认的精确 Release tag 加入此列表。
 const PRIVATE_MODE_APPROVED_RELEASES = ['v0.2.2-ztxcyk.2'];
 
-function assertPrivateModeRelease({ version, env = process.env, arch, manifest, approved = PRIVATE_MODE_APPROVED_RELEASES }) {
+function assertPrivateModeRelease({
+  version,
+  env = process.env,
+  arch,
+  manifest,
+  approved = PRIVATE_MODE_APPROVED_RELEASES,
+}) {
   const override = env.AIONUI_BACKEND_VERSION?.trim();
   const alternateSource = [
     'AIONUI_BACKEND_RUN_ID',

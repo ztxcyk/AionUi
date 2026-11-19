@@ -53,7 +53,10 @@ it('rejects invalid release JSON, missing files, bad PE and changed bytes', asyn
   const { args } = options();
   await assert.rejects(verifyPackedOfficeCli({ ...args, releaseJson: 'not json' }), /JSON/i);
   await assert.rejects(verifyPackedOfficeCli({ ...args, releaseJson: '{"tag":"v1"}' }), /release/i);
-  await assert.rejects(verifyPackedOfficeCli({ ...args, releaseJson: JSON.stringify({ ...release, tag: '..' }) }), /tag/i);
+  await assert.rejects(
+    verifyPackedOfficeCli({ ...args, releaseJson: JSON.stringify({ ...release, tag: '..' }) }),
+    /tag/i
+  );
   await assert.rejects(
     verifyPackedOfficeCli({
       ...args,
@@ -68,8 +71,11 @@ it('rejects invalid release JSON, missing files, bad PE and changed bytes', asyn
   const changed = pe(0x8664);
   changed[100] = 1;
   await assert.rejects(verifyPackedOfficeCli({ ...args, readFile: () => changed }), /SHA256/i);
-  await assert.rejects(verifyPackedOfficeCli({
-    ...args,
-    releaseJson: JSON.stringify({ ...release, checksums: { ...release.checksums, 'officecli-win-x64.exe': 'bad' } }),
-  }), /checksum/i);
+  await assert.rejects(
+    verifyPackedOfficeCli({
+      ...args,
+      releaseJson: JSON.stringify({ ...release, checksums: { ...release.checksums, 'officecli-win-x64.exe': 'bad' } }),
+    }),
+    /checksum/i
+  );
 });

@@ -224,10 +224,7 @@ for (const [scenario, code, commands] of [
     const result = probe({ scenario });
     assert.equal(result.status, 1, result.stderr);
     assert.deepEqual(result.commands, commands);
-    assert.match(
-      result.events.map((event) => event.message).join('\n'),
-      new RegExp(`exitCode=${code}`)
-    );
+    assert.match(result.events.map((event) => event.message).join('\n'), new RegExp(`exitCode=${code}`));
     assert.match(result.events.at(-1).message, /result=fail/);
   });
 }

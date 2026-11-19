@@ -58,7 +58,9 @@ async function createBuildMatrix(platform, resolveRelease = resolveOfficeCliRele
     .map((target) => target.platform);
   const include = requested.filter((target) => !skipped.includes(target.platform));
   if (windows.length === skipped.length) {
-    throw new Error(`OfficeCLI release ${info.tag} has no requested Windows architecture; skipped: ${skipped.join(', ')}`);
+    throw new Error(
+      `OfficeCLI release ${info.tag} has no requested Windows architecture; skipped: ${skipped.join(', ')}`
+    );
   }
   return { matrix: { include }, releaseInfo: JSON.stringify(info), skipped };
 }

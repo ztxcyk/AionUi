@@ -3,12 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { normalizeReleaseInfo, WINDOWS_ASSETS } = require('./prepare-officecli');
 
-async function verifyPackedOfficeCli({
-  resourcesDir,
-  arch,
-  releaseJson,
-  readFile = fs.readFileSync,
-}) {
+async function verifyPackedOfficeCli({ resourcesDir, arch, releaseJson, readFile = fs.readFileSync }) {
   let release;
   try {
     release = JSON.parse(releaseJson);

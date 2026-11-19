@@ -80,7 +80,10 @@ export function resolveBinaryPath(isPackaged = false): string {
   if (process.platform === 'win32' && isPackaged) {
     const bundled = bundledPath(runtimeKey, binaryName, diagnostics);
     if (bundled) return bundled;
-    throw new BackendBinaryResolveError(`Cannot find bundled "${BINARY_NAME}" binary for packaged Windows.`, diagnostics);
+    throw new BackendBinaryResolveError(
+      `Cannot find bundled "${BINARY_NAME}" binary for packaged Windows.`,
+      diagnostics
+    );
   }
 
   const override = envOverridePath(diagnostics);

@@ -1,8 +1,5 @@
 const path = require('node:path');
-const {
-  prepareOfficeCli,
-  resolveOfficeCliRelease,
-} = require('../packages/shared-scripts/src/prepare-officecli');
+const { prepareOfficeCli, resolveOfficeCliRelease } = require('../packages/shared-scripts/src/prepare-officecli');
 
 async function runCli({
   args = process.argv.slice(2),

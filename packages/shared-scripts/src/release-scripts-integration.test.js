@@ -7,9 +7,10 @@ const { it } = require('node:test');
 
 const root = path.resolve(__dirname, '../../..');
 const bash = process.platform === 'win32' ? 'C:\\Program Files\\Git\\bin\\bash.exe' : 'bash';
-const matrix = (arches) => JSON.stringify({
-  include: arches.map((arch) => ({ platform: `windows-${arch}`, arch, 'artifact-name': `windows-build-${arch}` })),
-});
+const matrix = (arches) =>
+  JSON.stringify({
+    include: arches.map((arch) => ({ platform: `windows-${arch}`, arch, 'artifact-name': `windows-build-${arch}` })),
+  });
 
 it('prepares and validates complete dual and single-architecture mock releases without stale artifacts', () => {
   const id = randomUUID();
@@ -17,11 +18,12 @@ it('prepares and validates complete dual and single-architecture mock releases w
   const output = `.release-output-${id}`;
   const inputPath = path.join(root, input);
   const outputPath = path.join(root, output);
-  const run = (script, args, extraEnv = {}) => spawnSync(bash, [script, ...args], {
-    cwd: root,
-    encoding: 'utf8',
-    env: { ...process.env, MOCK_VERSION: '1.0.0', ...extraEnv },
-  });
+  const run = (script, args, extraEnv = {}) =>
+    spawnSync(bash, [script, ...args], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, MOCK_VERSION: '1.0.0', ...extraEnv },
+    });
 
   try {
     for (const arches of [['x64', 'arm64'], ['x64'], ['arm64']]) {
@@ -33,23 +35,30 @@ it('prepares and validates complete dual and single-architecture mock releases w
       result = run('scripts/prepare-release-assets.sh', [input, output], { AIONUI_BUILD_MATRIX: matrix(arches) });
       assert.equal(result.status, 0, result.stderr + result.stdout);
       const manifest = JSON.parse(fs.readFileSync(path.join(outputPath, 'aionui-release-manifest.json'), 'utf8'));
-      assert.deepEqual(manifest.windows.map((entry) => entry.arch), arches);
+      assert.deepEqual(
+        manifest.windows.map((entry) => entry.arch),
+        arches
+      );
       if (arches.length === 2) {
         const verification = run('scripts/verify-release-assets.sh', [output]);
         assert.equal(verification.status, 0, verification.stderr + verification.stdout);
       }
-      const check = spawnSync(process.execPath, [
-        'packages/shared-scripts/src/release-windows-assets.js', 'check-distribution', output, '1.0.0',
-      ], { cwd: root, encoding: 'utf8' });
+      const check = spawnSync(
+        process.execPath,
+        ['packages/shared-scripts/src/release-windows-assets.js', 'check-distribution', output, '1.0.0'],
+        { cwd: root, encoding: 'utf8' }
+      );
       assert.equal(check.status, 0, check.stderr);
       for (const entry of manifest.windows) {
         for (const file of [entry.installer, entry.metadata]) {
           const target = path.join(outputPath, file);
           const contents = fs.readFileSync(target);
           fs.unlinkSync(target);
-          const missing = spawnSync(process.execPath, [
-            'packages/shared-scripts/src/release-windows-assets.js', 'check-distribution', output, '1.0.0',
-          ], { cwd: root, encoding: 'utf8' });
+          const missing = spawnSync(
+            process.execPath,
+            ['packages/shared-scripts/src/release-windows-assets.js', 'check-distribution', output, '1.0.0'],
+            { cwd: root, encoding: 'utf8' }
+          );
           assert.notEqual(missing.status, 0);
           assert.match(missing.stderr, /missing/i);
           fs.writeFileSync(target, contents);
@@ -60,7 +69,9 @@ it('prepares and validates complete dual and single-architecture mock releases w
           const target = path.join(inputPath, `windows-build-${arch}`, file);
           const contents = fs.readFileSync(target);
           fs.unlinkSync(target);
-          const missing = run('scripts/prepare-release-assets.sh', [input, output], { AIONUI_BUILD_MATRIX: matrix(arches) });
+          const missing = run('scripts/prepare-release-assets.sh', [input, output], {
+            AIONUI_BUILD_MATRIX: matrix(arches),
+          });
           assert.notEqual(missing.status, 0);
           assert.match(missing.stderr, /missing/i);
           fs.writeFileSync(target, contents);
@@ -112,6 +123,9 @@ it('uploads exactly the validated metadata list using a mocked AWS command', () 
       env: { ...process.env, FILES: files.join('\n'), S3_BUCKET: 'mock', S3_RELEASE_PREFIX: 'releases' },
     });
     assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual(result.stdout.trim().split(/\r?\n/), [...files.map((file) => `dist/${file}`), 'Uploaded updater metadata']);
+    assert.deepEqual(result.stdout.trim().split(/\r?\n/), [
+      ...files.map((file) => `dist/${file}`),
+      'Uploaded updater metadata',
+    ]);
   }
 });

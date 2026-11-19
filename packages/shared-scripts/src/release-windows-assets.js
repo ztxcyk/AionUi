@@ -13,7 +13,11 @@ function assertVersion(version) {
 
 function makeManifest(selected, version) {
   assertVersion(version);
-  if (!selected.length || new Set(selected).size !== selected.length || selected.some((arch) => !arches.includes(arch))) {
+  if (
+    !selected.length ||
+    new Set(selected).size !== selected.length ||
+    selected.some((arch) => !arches.includes(arch))
+  ) {
     throw new Error('Invalid selected Windows architectures');
   }
   return {
@@ -40,14 +44,20 @@ function fromMatrix(raw, version) {
       throw new Error('Invalid Windows build matrix entry');
     }
   }
-  return makeManifest(selected.map((item) => item.arch), version);
+  return makeManifest(
+    selected.map((item) => item.arch),
+    version
+  );
 }
 
 function checkManifest(manifest, version) {
   if (!manifest || manifest.schemaVersion !== 1 || manifest.version !== version || !Array.isArray(manifest.windows)) {
     throw new Error('Invalid release manifest or version');
   }
-  const expected = makeManifest(manifest.windows.map((entry) => entry?.arch), version);
+  const expected = makeManifest(
+    manifest.windows.map((entry) => entry?.arch),
+    version
+  );
   if (JSON.stringify(manifest) !== JSON.stringify(expected)) throw new Error('Invalid release manifest entries');
   return expected;
 }

@@ -1,14 +1,6 @@
 const assert = require('node:assert/strict');
 const { createHash, randomUUID } = require('node:crypto');
-const {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} = require('node:fs');
+const { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { afterEach, describe, it } = require('node:test');
 const { prepareOfficeCli, resolveOfficeCliRelease } = require('./prepare-officecli');
@@ -205,11 +197,12 @@ describe('prepareOfficeCli', () => {
     assert.deepEqual(readFileSync(result), arm64Bytes);
     assert.deepEqual(
       fetchImpl.calls.map(({ url }) => url),
-      [
-        `https://github.com/${RELEASE_REPOSITORY}/releases/download/${releaseInfo.tag}/${WINDOWS_ASSETS.arm64}`,
-      ]
+      [`https://github.com/${RELEASE_REPOSITORY}/releases/download/${releaseInfo.tag}/${WINDOWS_ASSETS.arm64}`]
     );
-    assert.equal(fetchImpl.calls.some(({ url }) => url === API_URL), false);
+    assert.equal(
+      fetchImpl.calls.some(({ url }) => url === API_URL),
+      false
+    );
   });
 
   it('resolves the latest release exactly once when no release information is supplied', async () => {
@@ -463,7 +456,10 @@ describe('prepareOfficeCli wrapper', () => {
       projectRoot,
     });
 
-    assert.equal(fetchImpl.calls.some(({ url }) => url === API_URL), false);
+    assert.equal(
+      fetchImpl.calls.some(({ url }) => url === API_URL),
+      false
+    );
     assert.deepEqual(readFileSync(stagedPath(projectRoot)), x64Bytes);
     assert.equal(logs.length, 1);
   });
