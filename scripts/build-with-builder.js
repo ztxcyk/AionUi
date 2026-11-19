@@ -713,7 +713,10 @@ try {
       assertPrivateModeRelease,
       prepareWindowsOfficeCli,
     } = require('../packages/shared-scripts/src/officecli-build-gate');
-    assertPrivateModeRelease({ version: JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).aioncoreVersion });
+    assertPrivateModeRelease({
+      version: JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).aioncoreVersion,
+      env: process.env,
+    });
     prepareWindowsOfficeCli({ arch: targetArch, multiArch });
   }
   restorePackageVersionOverride = applyDebugAutoUpdateVersionOverride(packageJsonPath);

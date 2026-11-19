@@ -104,6 +104,20 @@ it('blocks unconfirmed Windows AionCore releases, including the current pin', ()
   }
 });
 
+it('allows the verified Windows x64 AionCore release pin', () => {
+  const version = 'v0.2.2-ztxcyk.2';
+  const url =
+    'https://github.com/ztxcyk/AionCore/releases/download/v0.2.2-ztxcyk.2/aioncore-v0.2.2-ztxcyk.2-x86_64-pc-windows-msvc.zip';
+  assert.doesNotThrow(() =>
+    assertPrivateModeRelease({
+      version,
+      arch: 'x64',
+      env: {},
+      manifest: { version, sourceType: 'download', source: { url } },
+    })
+  );
+});
+
 it('allows only the explicitly confirmed pinned release and its downloaded bundle', () => {
   const approved = ['v9.0.0'];
   const validUrl =
@@ -167,7 +181,12 @@ it('stops the normal Windows build wrapper before invoking any build or download
   const root = path.resolve(__dirname, '../../..');
   const filename = path.join(root, 'scripts', 'build-with-builder.js');
   const source = fs.readFileSync(filename, 'utf8').replace(/^#![^\n]*\n/, '');
-  const fakeProcess = { argv: ['node', filename, 'x64', '--win', '--x64'], arch: 'x64', platform: 'win32', env: {} };
+  const fakeProcess = {
+    argv: ['node', filename, 'x64', '--win', '--x64'],
+    arch: 'x64',
+    platform: 'win32',
+    env: { AIONUI_BACKEND_VERSION: 'v0.2.2-ztxcyk.1' },
+  };
   const errors = [];
   let executions = 0;
   const fakeRequire = (name) => {
